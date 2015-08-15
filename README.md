@@ -1,5 +1,8 @@
 # serviio
-Startupscript for the serviio media server CentOS 6.7
+Startupscript for the serviio media server 1.5.2 and CentOS 6.7
+
+Serviio is developed by Petr Nejedly, who currently lives in London and works as a freelance Java consultant.
+http://serviio.org
 
 This project was started to discover GitHub.
 
