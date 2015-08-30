@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# serviio       Serviio Startup Script for serviio version 1.5.2
+# serviio       Serviio Startup Script for serviio version 1.6.0
 #
 # This script comes with no warranty. Use at your own risk.
 # Copyright (C) 2015  Arthur Keusch
@@ -24,6 +24,8 @@
 # /usr/local/serviio must have serviio as owner and group
 # added var java_path seems serviio 1.3 need it
 #
+# Starting with version 1.6 the force stop/start function is implemented using kill -9 $pid
+# 
 # Source function library.
 . /etc/init.d/functions
 
@@ -32,13 +34,15 @@
 
 # enable debug
 #set -x
-#
-exec="/usr/local/serviio/bin/serviio.sh"
+exec="/usr/local/serviio/bin/serviio.sh" 
 prog="serviio"
 user="serviio"
 home_dir="/home/$user"
 count=0
 ffmpeg_path="/usr/bin"
+#ffmpeg_path="/usr/local/bin"
+#ffmpeg_path="/home/bin"
+#java_path="/usr/bin"
 java_path="/opt/jdk1.8.0_45"
 
 lockfile=/var/lock/subsys/$prog
@@ -49,33 +53,42 @@ start() {
     [ -d $home_dir ] || exit 5
     [ -x $exec ] || exit 5
     echo -n "Starting Serviio media server: "
+# if not running, start it up here, usually something like "daemon $exec"
+#    export PATH=$PATH:/usr/bin:/usr/local/bin
     export PATH=$PATH:$ffmpeg_path:/usr/bin
+#    export PATH=$PATH:/usr/bin:$ffmpeg_path:$java_path
     #daemon --user $user $exec  > /dev/null 2>1 &
     daemonize -u $user $exec  > /dev/null 2>1 &
+#    daemonize -u $user $exec  &
+#    $exec  > /dev/null 2>1 &
 
 
     # Wait until serviio runs as user serviio
 
     while [ $count -lt 5 ]
     do
-     PROC_RUN=$(ps -fu serviio | awk '{print $9}' |grep Xmx512M)
+    #PROC=$(ps -fu $user |grep $exec |head -n1| awk '{print $2}')
+    #PROC_RUN=$(ps -fu serviio | awk '{print $9}' |grep Xmx512M)
+    PROC_RUN=$(ps -fu serviio | awk '{print $19}' |grep "Dserviio.home")
 
-      if [ "$PROC_RUN" = "-Xmx512M" ] ; then
+      #if [ "$PROC_RUN" = "-Xmx512M" ] ; then
+      if [ "$PROC_RUN" = "-Dserviio.home=/usr/local/serviio" ] ; then
 
-      PROC=$(ps -fu serviio | grep Xmx512M |  awk '{print $2}')
+      #PROC=$(ps -fu serviio | grep Xmx512M |  awk '{print $2}')
+      PROC=$(ps -fu serviio | grep "Dserviio.home=/usr/local/serviio" |  awk '{print $2}')
         RETVALT=0
-        touch $lockfile && echo -e '\033[58G' '\033[0;39m' "[" '\033[0;32m'  "OK" '\033[0;39m' "]"
+        touch $lockfile && echo -e '\033[58G' '\033[0;39m' "[" '\033[0;32m'  "OK" '\033[0;39m' "]" 
         echo $PROC > $pidfile
         break
       else
         count=`expr $count + 1 `
         sleep 5
-        RETVALT=1
+	RETVALT=1
       fi
     done
 
     if  [ "$RETVALT" -ne "0" ] ; then
-      echo -e '\033[58G' '\033[0;39m' "[" '\033[0;31m'  "FAIL" '\033[0;39m' "]"
+      echo -e '\033[58G' '\033[0;39m' "[" '\033[0;31m'  "FAIL" '\033[0;39m' "]" 
     fi
     return $RETVALT
 }
@@ -90,7 +103,7 @@ stop() {
        rm -f $lockfile && rm -f $pidfile && echo -e '\033[58G' '\033[0;39m' "[" '\033[0;32m'  "OK" '\033[0;39m' "]"
       else
        RETVALT=1
-       echo -e '\033[58G' '\033[0;39m' "[" '\033[0;31m'  "FAIL" '\033[0;39m' "]"
+       echo -e '\033[58G' '\033[0;39m' "[" '\033[0;31m'  "FAIL" '\033[0;39m' "]" 
       fi
     return $RETVALT
 }
@@ -105,8 +118,31 @@ reload() {
     restart
 }
 
-force_reload() {
-    restart
+force_stop() {
+    PROC=$(pgrep -u $user)
+    REVAL=$?
+      if [ $REVAL -eq 0 ] ; then
+        echo -n "Killing media server: "
+    	kill -9 $PROC
+    	REVAL=$? 
+      	   if [ $REVAL -eq 0 ] ; then
+             rm -f $lockfile && rm -f $pidfile && echo -e '\033[58G' '\033[0;39m' "[" '\033[0;32m'  "OK" '\033[0;39m' "]"
+             RETVALT=0
+           else
+             RETVALT=1
+             echo -e '\033[58G' '\033[0;39m' "[" '\033[0;31m'  "FAIL" '\033[0;39m' "]" 
+           fi
+      else
+             echo "Serviio Media Server not running" 
+             exit 0
+      fi
+    return $RETVALT
+}
+
+force_restart() {
+    force_stop
+    sleep 2
+    start
 }
 
 rh_status() {
@@ -134,8 +170,11 @@ case "$1" in
 #        rh_status_q || exit 7
         $1
         ;;
-    force-reload)
-        force_reload
+    force-stop)
+        force_stop
+        ;;
+    force-restart)
+        force_restart
         ;;
     status)
         rh_status
@@ -145,7 +184,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-restart|force-stop}"
         exit 2
 esac
 exit $?
