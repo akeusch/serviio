@@ -119,7 +119,7 @@ reload() {
 }
 
 force_stop() {
-    PROC=$(pgrep -u $user)
+    PROC=$(pgrep -u $user java)
     REVAL=$?
       if [ $REVAL -eq 0 ] ; then
         echo -n "Killing media server: "
