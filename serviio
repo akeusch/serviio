@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# serviio       Serviio Startup Script for serviio version 1.6.0
+# serviio       Serviio Startup Script for serviio version 1.6.1
 #
 # This script comes with no warranty. Use at your own risk.
 # Copyright (C) 2015  Arthur Keusch
@@ -40,9 +40,6 @@ user="serviio"
 home_dir="/home/$user"
 count=0
 ffmpeg_path="/usr/bin"
-#ffmpeg_path="/usr/local/bin"
-#ffmpeg_path="/home/bin"
-#java_path="/usr/bin"
 java_path="/opt/jdk1.8.0_45"
 
 lockfile=/var/lock/subsys/$prog
@@ -54,24 +51,15 @@ start() {
     [ -x $exec ] || exit 5
     echo -n "Starting Serviio media server: "
 # if not running, start it up here, usually something like "daemon $exec"
-#    export PATH=$PATH:/usr/bin:/usr/local/bin
     export PATH=$PATH:$ffmpeg_path:/usr/bin
-#    export PATH=$PATH:/usr/bin:$ffmpeg_path:$java_path
-    #daemon --user $user $exec  > /dev/null 2>1 &
     daemonize -u $user $exec  > /dev/null 2>1 &
-#    daemonize -u $user $exec  &
-#    $exec  > /dev/null 2>1 &
-
 
     # Wait until serviio runs as user serviio
 
     while [ $count -lt 5 ]
     do
-    #PROC=$(ps -fu $user |grep $exec |head -n1| awk '{print $2}')
-    #PROC_RUN=$(ps -fu serviio | awk '{print $9}' |grep Xmx512M)
     PROC_RUN=$(ps -fu serviio | awk '{print $19}' |grep "Dserviio.home")
 
-      #if [ "$PROC_RUN" = "-Xmx512M" ] ; then
       if [ "$PROC_RUN" = "-Dserviio.home=/usr/local/serviio" ] ; then
 
       #PROC=$(ps -fu serviio | grep Xmx512M |  awk '{print $2}')
@@ -150,24 +138,18 @@ rh_status() {
     status $prog
 }
 
-rh_status_q() {
-    rh_status >/dev/null 2>&1
-}
 
 case "$1" in
     start)
-#        rh_status_q && exit 0
         $1
         ;;
     stop)
-#        rh_status_q || exit 0
         $1
         ;;
     restart)
         $1
         ;;
     reload)
-#        rh_status_q || exit 7
         $1
         ;;
     force-stop)
@@ -179,12 +161,8 @@ case "$1" in
     status)
         rh_status
         ;;
-    condrestart|try-restart)
-        rh_status_q || exit 0
-        restart
-        ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-restart|force-stop}"
+        echo $"Usage: $0 {start|stop|status|restart|reload|force-restart|force-stop}"
         exit 2
 esac
 exit $?
