@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# serviio       Serviio Startup Script for serviio version 1.6.1
+# serviio       Serviio Startup Script for serviio version 1.6.2
 #
 # This script comes with no warranty. Use at your own risk.
 # Copyright (C) 2015  Arthur Keusch
